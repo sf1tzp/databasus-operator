@@ -289,14 +289,20 @@ spec:
                         type: integer
                       database:
                         type: string
+                      excludeTables:
+                        items:
+                          type: string
+                        type: array
                       host:
                         type: string
                       includeSchemas:
                         items:
                           type: string
                         type: array
-                      isHttps:
+                      isSkipUserMappings:
                         default: false
+                        description: Skip the readable-user-mappings check before
+                          pg_dump.
                         type: boolean
                       passwordSecretRef:
                         description: SecretKeyRef references a key within a Kubernetes
@@ -314,6 +320,56 @@ spec:
                         type: object
                       port:
                         type: integer
+                      sslClientCertSecretRef:
+                        description: PEM client certificate for mutual TLS.
+                        properties:
+                          key:
+                            description: Key within the Secret data.
+                            type: string
+                          name:
+                            description: Name of the Secret in the same namespace.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      sslClientKeySecretRef:
+                        description: PEM client key for mutual TLS.
+                        properties:
+                          key:
+                            description: Key within the Secret data.
+                            type: string
+                          name:
+                            description: Name of the Secret in the same namespace.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      sslMode:
+                        default: disable
+                        description: SslMode controls TLS for the database connection
+                          (libpq semantics).
+                        enum:
+                        - disable
+                        - require
+                        - verify-ca
+                        - verify-full
+                        type: string
+                      sslRootCertSecretRef:
+                        description: PEM CA certificate used to verify the server
+                          (verify-ca/verify-full).
+                        properties:
+                          key:
+                            description: Key within the Secret data.
+                            type: string
+                          name:
+                            description: Name of the Secret in the same namespace.
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
                       username:
                         type: string
                       version:
