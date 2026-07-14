@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	databasusv1alpha1 "github.com/databasus/databasus/operator/api/v1alpha1"
-	dbclient "github.com/databasus/databasus/operator/internal/client"
+	databasusv1alpha1 "github.com/sf1tzp/databasus-operator/api/v1alpha1"
+	dbclient "github.com/sf1tzp/databasus-operator/internal/client"
 )
 
 const (
@@ -81,7 +81,7 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	storageID, err := r.resolveStorageRef(ctx, dbBackup.Namespace, dbBackup.Spec.Backup.StorageRef)
 	if err != nil {
 		logger.Info("waiting for storage dependency", "storage_ref", dbBackup.Spec.Backup.StorageRef, "error", err.Error())
-		r.setCondition(&dbBackup, "Ready", metav1.ConditionFalse, "DependencyNotReady", err.Error())
+		r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "DependencyNotReady", err.Error())
 		_ = r.Status().Update(ctx, &dbBackup)
 
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
@@ -91,7 +91,7 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	notifierIDs, err := r.resolveNotifierRefs(ctx, dbBackup.Namespace, dbBackup.Spec.Database.NotifierRefs)
 	if err != nil {
 		logger.Info("waiting for notifier dependency", "error", err.Error())
-		r.setCondition(&dbBackup, "Ready", metav1.ConditionFalse, "DependencyNotReady", err.Error())
+		r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "DependencyNotReady", err.Error())
 		_ = r.Status().Update(ctx, &dbBackup)
 
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
@@ -101,7 +101,7 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	password, err := r.resolveDatabasePassword(ctx, &dbBackup)
 	if err != nil {
 		logger.Error(err, "failed to resolve database password")
-		r.setCondition(&dbBackup, "Ready", metav1.ConditionFalse, "SecretResolutionFailed", err.Error())
+		r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "SecretResolutionFailed", err.Error())
 		_ = r.Status().Update(ctx, &dbBackup)
 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -121,7 +121,7 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if err != nil {
 		logger.Error(err, "failed to sync database to databasus")
-		r.setCondition(&dbBackup, "Ready", metav1.ConditionFalse, "APISyncFailed", err.Error())
+		r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "APISyncFailed", err.Error())
 		_ = r.Status().Update(ctx, &dbBackup)
 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -134,7 +134,7 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if _, err := r.DatabasusClient.SaveBackupConfig(ctx, backupReq); err != nil {
 		logger.Error(err, "failed to sync backup config to databasus")
-		r.setCondition(&dbBackup, "Ready", metav1.ConditionFalse, "BackupConfigSyncFailed", err.Error())
+		r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "BackupConfigSyncFailed", err.Error())
 		_ = r.Status().Update(ctx, &dbBackup)
 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -146,7 +146,7 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		if _, err := r.DatabasusClient.SaveHealthcheckConfig(ctx, hcReq); err != nil {
 			logger.Error(err, "failed to sync healthcheck config to databasus")
-			r.setCondition(&dbBackup, "Ready", metav1.ConditionFalse, "HealthcheckSyncFailed", err.Error())
+			r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "HealthcheckSyncFailed", err.Error())
 			_ = r.Status().Update(ctx, &dbBackup)
 
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -170,7 +170,7 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Set success status
 	dbBackup.Status.ObservedGeneration = dbBackup.Generation
-	r.setCondition(&dbBackup, "Ready", metav1.ConditionTrue, "Synced", "DatabaseBackup synced to databasus")
+	r.setReadyCondition(&dbBackup, metav1.ConditionTrue, "Synced", "DatabaseBackup synced to databasus")
 
 	if err := r.Status().Update(ctx, &dbBackup); err != nil {
 		return ctrl.Result{}, err
@@ -200,7 +200,7 @@ func (r *DatabaseBackupReconciler) resolveStorageRef(ctx context.Context, namesp
 }
 
 func (r *DatabaseBackupReconciler) resolveNotifierRefs(ctx context.Context, namespace string, notifierRefNames []string) ([]string, error) {
-	var notifierIDs []string
+	notifierIDs := make([]string, 0, len(notifierRefNames))
 
 	for _, name := range notifierRefNames {
 		var notifier databasusv1alpha1.Notifier
@@ -421,9 +421,9 @@ func (r *DatabaseBackupReconciler) buildHealthcheckRequest(dbBackup *databasusv1
 	}
 }
 
-func (r *DatabaseBackupReconciler) setCondition(dbBackup *databasusv1alpha1.DatabaseBackup, condType string, status metav1.ConditionStatus, reason, message string) {
+func (r *DatabaseBackupReconciler) setReadyCondition(dbBackup *databasusv1alpha1.DatabaseBackup, status metav1.ConditionStatus, reason, message string) {
 	meta.SetStatusCondition(&dbBackup.Status.Conditions, metav1.Condition{
-		Type:               condType,
+		Type:               "Ready",
 		Status:             status,
 		ObservedGeneration: dbBackup.Generation,
 		LastTransitionTime: metav1.Now(),

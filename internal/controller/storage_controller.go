@@ -15,15 +15,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	databasusv1alpha1 "github.com/databasus/databasus/operator/api/v1alpha1"
-	dbclient "github.com/databasus/databasus/operator/internal/client"
+	databasusv1alpha1 "github.com/sf1tzp/databasus-operator/api/v1alpha1"
+	dbclient "github.com/sf1tzp/databasus-operator/internal/client"
 )
 
 const storageFinalizer = "databasus.io/storage-cleanup"
 
 type StorageReconciler struct {
 	client.Client
-	Scheme         *runtime.Scheme
+	Scheme          *runtime.Scheme
 	DatabasusClient *dbclient.DatabasusClient
 }
 
@@ -75,7 +75,7 @@ func (r *StorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	apiReq, err := r.buildStorageRequest(ctx, &storage)
 	if err != nil {
 		logger.Error(err, "failed to build storage request")
-		r.setCondition(&storage, "Ready", metav1.ConditionFalse, "SecretResolutionFailed", err.Error())
+		r.setReadyCondition(&storage, metav1.ConditionFalse, "SecretResolutionFailed", err.Error())
 		_ = r.Status().Update(ctx, &storage)
 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -88,7 +88,7 @@ func (r *StorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	resp, err := r.DatabasusClient.SaveStorage(ctx, apiReq)
 	if err != nil {
 		logger.Error(err, "failed to save storage to databasus")
-		r.setCondition(&storage, "Ready", metav1.ConditionFalse, "APISyncFailed", err.Error())
+		r.setReadyCondition(&storage, metav1.ConditionFalse, "APISyncFailed", err.Error())
 		_ = r.Status().Update(ctx, &storage)
 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -97,7 +97,7 @@ func (r *StorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Update status
 	storage.Status.ID = resp.ID
 	storage.Status.ObservedGeneration = storage.Generation
-	r.setCondition(&storage, "Ready", metav1.ConditionTrue, "Synced", "Storage synced to databasus")
+	r.setReadyCondition(&storage, metav1.ConditionTrue, "Synced", "Storage synced to databasus")
 
 	if err := r.Status().Update(ctx, &storage); err != nil {
 		return ctrl.Result{}, err
@@ -194,9 +194,9 @@ func (r *StorageReconciler) resolveSecretRef(ctx context.Context, namespace stri
 	return string(value), nil
 }
 
-func (r *StorageReconciler) setCondition(storage *databasusv1alpha1.Storage, condType string, status metav1.ConditionStatus, reason, message string) {
+func (r *StorageReconciler) setReadyCondition(storage *databasusv1alpha1.Storage, status metav1.ConditionStatus, reason, message string) {
 	meta.SetStatusCondition(&storage.Status.Conditions, metav1.Condition{
-		Type:               condType,
+		Type:               "Ready",
 		Status:             status,
 		ObservedGeneration: storage.Generation,
 		LastTransitionTime: metav1.Now(),

@@ -43,8 +43,8 @@ type IntervalRequest struct {
 }
 
 type BackupConfigResponse struct {
-	DatabaseID       string `json:"databaseId"`
-	IsBackupsEnabled bool   `json:"isBackupsEnabled"`
+	DatabaseID       string  `json:"databaseId"`
+	IsBackupsEnabled bool    `json:"isBackupsEnabled"`
 	StorageID        *string `json:"storageId"`
 }
 

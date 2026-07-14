@@ -30,8 +30,8 @@ type RetentionPolicyType string
 
 const (
 	RetentionPolicyTypeTimePeriod RetentionPolicyType = "TIME_PERIOD"
-	RetentionPolicyTypeCount     RetentionPolicyType = "COUNT"
-	RetentionPolicyTypeGFS       RetentionPolicyType = "GFS"
+	RetentionPolicyTypeCount      RetentionPolicyType = "COUNT"
+	RetentionPolicyTypeGFS        RetentionPolicyType = "GFS"
 )
 
 // +kubebuilder:validation:Enum=NONE;ENCRYPTED
@@ -52,8 +52,8 @@ const (
 
 // DatabaseBackupSpec defines the desired state of a managed database backup.
 type DatabaseBackupSpec struct {
-	Database    DatabaseSpec    `json:"database"`
-	Backup      BackupSpec      `json:"backup"`
+	Database    DatabaseSpec     `json:"database"`
+	Backup      BackupSpec       `json:"backup"`
 	Healthcheck *HealthcheckSpec `json:"healthcheck,omitempty"`
 }
 

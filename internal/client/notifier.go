@@ -46,10 +46,10 @@ type EmailRequest struct {
 }
 
 type WebhookRequest struct {
-	WebhookURL    string                  `json:"webhookUrl"`
-	WebhookMethod string                  `json:"webhookMethod"`
-	BodyTemplate  string                  `json:"bodyTemplate,omitempty"`
-	Headers       []WebhookHeaderRequest  `json:"headers,omitempty"`
+	WebhookURL    string                 `json:"webhookUrl"`
+	WebhookMethod string                 `json:"webhookMethod"`
+	BodyTemplate  string                 `json:"bodyTemplate,omitempty"`
+	Headers       []WebhookHeaderRequest `json:"headers,omitempty"`
 }
 
 type WebhookHeaderRequest struct {
@@ -62,10 +62,10 @@ type TeamsRequest struct {
 }
 
 type NotifierResponse struct {
-	ID           string  `json:"id"`
-	WorkspaceID  string  `json:"workspaceId"`
-	Name         string  `json:"name"`
-	NotifierType string  `json:"notifierType"`
+	ID            string  `json:"id"`
+	WorkspaceID   string  `json:"workspaceId"`
+	Name          string  `json:"name"`
+	NotifierType  string  `json:"notifierType"`
 	LastSendError *string `json:"lastSendError"`
 }
 

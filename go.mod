@@ -1,4 +1,4 @@
-module github.com/databasus/databasus/operator
+module github.com/sf1tzp/databasus-operator
 
 go 1.24.6
 

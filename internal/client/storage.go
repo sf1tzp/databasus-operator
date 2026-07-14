@@ -8,12 +8,12 @@ import (
 )
 
 type StorageRequest struct {
-	ID          string      `json:"id,omitempty"`
-	WorkspaceID string      `json:"workspaceId"`
-	Type        string      `json:"type"`
-	Name        string      `json:"name"`
-	IsSystem    bool        `json:"isSystem"`
-	S3Storage   *S3Request  `json:"s3Storage,omitempty"`
+	ID          string       `json:"id,omitempty"`
+	WorkspaceID string       `json:"workspaceId"`
+	Type        string       `json:"type"`
+	Name        string       `json:"name"`
+	IsSystem    bool         `json:"isSystem"`
+	S3Storage   *S3Request   `json:"s3Storage,omitempty"`
 	SFTPStorage *SFTPRequest `json:"sftpStorage,omitempty"`
 	// Additional storage types can be added as needed.
 }
@@ -31,13 +31,13 @@ type S3Request struct {
 }
 
 type SFTPRequest struct {
-	Host              string `json:"host"`
-	Port              int    `json:"port"`
-	Username          string `json:"username"`
-	Password          string `json:"password,omitempty"`
-	PrivateKey        string `json:"privateKey,omitempty"`
-	Path              string `json:"path,omitempty"`
-	IsSkipHostKeyVerify bool `json:"isSkipHostKeyVerify"`
+	Host                string `json:"host"`
+	Port                int    `json:"port"`
+	Username            string `json:"username"`
+	Password            string `json:"password,omitempty"`
+	PrivateKey          string `json:"privateKey,omitempty"`
+	Path                string `json:"path,omitempty"`
+	IsSkipHostKeyVerify bool   `json:"isSkipHostKeyVerify"`
 }
 
 type StorageResponse struct {

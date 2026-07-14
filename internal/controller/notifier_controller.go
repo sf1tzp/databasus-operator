@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	databasusv1alpha1 "github.com/databasus/databasus/operator/api/v1alpha1"
-	dbclient "github.com/databasus/databasus/operator/internal/client"
+	databasusv1alpha1 "github.com/sf1tzp/databasus-operator/api/v1alpha1"
+	dbclient "github.com/sf1tzp/databasus-operator/internal/client"
 )
 
 const notifierFinalizer = "databasus.io/notifier-cleanup"
@@ -75,7 +75,7 @@ func (r *NotifierReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	apiReq, err := r.buildNotifierRequest(ctx, &notifier)
 	if err != nil {
 		logger.Error(err, "failed to build notifier request")
-		r.setCondition(&notifier, "Ready", metav1.ConditionFalse, "SecretResolutionFailed", err.Error())
+		r.setReadyCondition(&notifier, metav1.ConditionFalse, "SecretResolutionFailed", err.Error())
 		_ = r.Status().Update(ctx, &notifier)
 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -88,7 +88,7 @@ func (r *NotifierReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	resp, err := r.DatabasusClient.SaveNotifier(ctx, apiReq)
 	if err != nil {
 		logger.Error(err, "failed to save notifier to databasus")
-		r.setCondition(&notifier, "Ready", metav1.ConditionFalse, "APISyncFailed", err.Error())
+		r.setReadyCondition(&notifier, metav1.ConditionFalse, "APISyncFailed", err.Error())
 		_ = r.Status().Update(ctx, &notifier)
 
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -97,7 +97,7 @@ func (r *NotifierReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Update status
 	notifier.Status.ID = resp.ID
 	notifier.Status.ObservedGeneration = notifier.Generation
-	r.setCondition(&notifier, "Ready", metav1.ConditionTrue, "Synced", "Notifier synced to databasus")
+	r.setReadyCondition(&notifier, metav1.ConditionTrue, "Synced", "Notifier synced to databasus")
 
 	if err := r.Status().Update(ctx, &notifier); err != nil {
 		return ctrl.Result{}, err
@@ -248,9 +248,9 @@ func (r *NotifierReconciler) resolveSecretRef(ctx context.Context, namespace str
 	return string(value), nil
 }
 
-func (r *NotifierReconciler) setCondition(notifier *databasusv1alpha1.Notifier, condType string, status metav1.ConditionStatus, reason, message string) {
+func (r *NotifierReconciler) setReadyCondition(notifier *databasusv1alpha1.Notifier, status metav1.ConditionStatus, reason, message string) {
 	meta.SetStatusCondition(&notifier.Status.Conditions, metav1.Condition{
-		Type:               condType,
+		Type:               "Ready",
 		Status:             status,
 		ObservedGeneration: notifier.Generation,
 		LastTransitionTime: metav1.Now(),
