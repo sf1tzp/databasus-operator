@@ -75,7 +75,7 @@ func (c *DatabasusClient) GetStorage(ctx context.Context, storageID string) (*St
 		return nil, err
 	}
 
-	if statusCode == http.StatusNotFound {
+	if isNotFound(statusCode, body) {
 		return nil, nil
 	}
 
@@ -97,7 +97,7 @@ func (c *DatabasusClient) DeleteStorage(ctx context.Context, storageID string) e
 		return err
 	}
 
-	if statusCode != http.StatusOK && statusCode != http.StatusNoContent {
+	if statusCode != http.StatusOK && statusCode != http.StatusNoContent && !isNotFound(statusCode, body) {
 		return parseError(statusCode, body)
 	}
 

@@ -44,6 +44,13 @@ Note: the server does not reject unknown JSON fields, so stale fields fail silen
 — against v3.48 the old `postgresql` payload is dropped wholesale and creation fails
 with a validation error ("host is required"), not a schema error.
 
+Discovered by the contract tests (July 2026): v3.48 reports missing records as
+**400 with gorm's "record not found" text, not 404** (no controller in scope uses
+`StatusNotFound`). The client's `isNotFound` helper treats both as absence, and the
+Delete methods treat not-found as success so finalizers cannot wedge on records
+deleted out-of-band. `POST /databases/update` also requires `workspaceId`; the
+client now defaults it on update as it already did on create.
+
 ### Decisions (July 2026)
 
 - **CRD stays operator-owned** (see principle above): `type: POSTGRES` and the
@@ -61,27 +68,30 @@ with a validation error ("host is required"), not a schema error.
 
 ### Tasks
 
-- [ ] `internal/client/database.go`: map `POSTGRES` → `POSTGRES_LOGICAL`; replace
+- [x] `internal/client/database.go`: map `POSTGRES` → `POSTGRES_LOGICAL`; replace
       `PostgresqlRequest` with the `postgresqlLogical` DTO (`sslMode`, cert fields,
       `excludeTables`, `isSkipUserMappings`; no `isHttps`/`backupType`)
-- [ ] `internal/client/backup_config.go`: `IntervalRequest` field `interval` → `type`,
+- [x] `internal/client/backup_config.go`: `IntervalRequest` field `interval` → `type`,
       drop `id`
-- [ ] `internal/client/storage.go`: drop `IsSystem` from `StorageRequest`
-- [ ] CRD: replace `PostgresqlDatabaseSpec.IsHttps` with `sslMode` (+ optional
+- [x] `internal/client/storage.go`: drop `IsSystem` from `StorageRequest`
+- [x] CRD: replace `PostgresqlDatabaseSpec.IsHttps` with `sslMode` (+ optional
       cert secret refs, `excludeTables`, `isSkipUserMappings`); reject
       `backupType: WAL_V1` in the controller; `make manifests generate`
-- [ ] Contract tests (see §2) in the same branch, pinned to v3.48
-- [ ] Update the README compatibility matrix; document the `isHttps` → `sslMode`
+- [x] Contract tests (see §2) in the same branch, pinned to v3.48
+      (`make test-contract`, `test/contract/`)
+- [x] Update the README compatibility matrix; document the `isHttps` → `sslMode`
       CR break and test-env CR recreation
+- [ ] Recreate the test-env CRs against the new CRD schema and verify a live
+      reconcile end-to-end
 
 ## 2. Contract tests in CI
 
 Make the compatibility matrix verified instead of asserted:
 
-- [ ] Integration test suite that runs the `internal/client` calls against a real
+- [x] Integration test suite that runs the `internal/client` calls against a real
       databasus instance (pinned image tag + postgres) started in CI
-      (lands with the §1 migration branch)
-- [ ] Pin the databasus image version in one greppable place so Renovate can bump it;
+      (`test/contract/`, `make test-contract`, CI `contract` job)
+- [x] Pin the databasus image version in one greppable place so Renovate can bump it;
       each upstream release then arrives as a PR whose CI proves (or disproves)
       compatibility
 - [ ] Internal-cluster e2e (operator deployed alongside the upstream Helm chart)

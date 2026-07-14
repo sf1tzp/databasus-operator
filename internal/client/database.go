@@ -124,6 +124,10 @@ func (c *DatabasusClient) CreateDatabase(ctx context.Context, req *DatabaseReque
 }
 
 func (c *DatabasusClient) UpdateDatabase(ctx context.Context, req *DatabaseRequest) (*DatabaseResponse, error) {
+	if req.WorkspaceID == "" {
+		req.WorkspaceID = c.workspaceID
+	}
+
 	body, statusCode, err := c.do(ctx, http.MethodPost, "/api/v1/databases/update", req)
 	if err != nil {
 		return nil, err
@@ -147,7 +151,7 @@ func (c *DatabasusClient) GetDatabase(ctx context.Context, databaseID string) (*
 		return nil, err
 	}
 
-	if statusCode == http.StatusNotFound {
+	if isNotFound(statusCode, body) {
 		return nil, nil
 	}
 
@@ -169,7 +173,7 @@ func (c *DatabasusClient) DeleteDatabase(ctx context.Context, databaseID string)
 		return err
 	}
 
-	if statusCode != http.StatusOK && statusCode != http.StatusNoContent {
+	if statusCode != http.StatusOK && statusCode != http.StatusNoContent && !isNotFound(statusCode, body) {
 		return parseError(statusCode, body)
 	}
 

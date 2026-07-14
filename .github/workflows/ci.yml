@@ -19,3 +19,13 @@ jobs:
         run: make test
       - name: Build
         run: make build
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Contract tests against pinned databasus
+        run: make test-contract
