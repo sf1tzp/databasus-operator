@@ -49,7 +49,7 @@ func (c *DatabasusClient) GetHealthcheckConfig(ctx context.Context, databaseID s
 		return nil, err
 	}
 
-	if statusCode == http.StatusNotFound {
+	if isNotFound(statusCode, body) {
 		return nil, nil
 	}
 

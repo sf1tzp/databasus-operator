@@ -71,7 +71,7 @@ func (c *DatabasusClient) GetBackupConfig(ctx context.Context, databaseID string
 		return nil, err
 	}
 
-	if statusCode == http.StatusNotFound {
+	if isNotFound(statusCode, body) {
 		return nil, nil
 	}
 

@@ -97,7 +97,7 @@ func (c *DatabasusClient) GetNotifier(ctx context.Context, notifierID string) (*
 		return nil, err
 	}
 
-	if statusCode == http.StatusNotFound {
+	if isNotFound(statusCode, body) {
 		return nil, nil
 	}
 
@@ -119,7 +119,7 @@ func (c *DatabasusClient) DeleteNotifier(ctx context.Context, notifierID string)
 		return err
 	}
 
-	if statusCode != http.StatusOK && statusCode != http.StatusNoContent {
+	if statusCode != http.StatusOK && statusCode != http.StatusNoContent && !isNotFound(statusCode, body) {
 		return parseError(statusCode, body)
 	}
 

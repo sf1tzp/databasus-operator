@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -96,6 +97,26 @@ func parseError(statusCode int, body []byte) error {
 	}
 
 	return &APIError{StatusCode: statusCode, Message: errResp.Error}
+}
+
+// isNotFound reports whether a response means "record does not exist".
+// databasus (as of v3.48) reports missing records as 400 with gorm's
+// "record not found" error text rather than a 404.
+func isNotFound(statusCode int, body []byte) bool {
+	if statusCode == http.StatusNotFound {
+		return true
+	}
+
+	if statusCode != http.StatusBadRequest {
+		return false
+	}
+
+	var errResp struct {
+		Error string `json:"error"`
+	}
+
+	return json.Unmarshal(body, &errResp) == nil &&
+		strings.Contains(errResp.Error, "record not found")
 }
 
 // HealthCheck verifies connectivity to the databasus API.
