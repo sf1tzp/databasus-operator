@@ -1,6 +1,21 @@
 # databasus-operator
 
-A Kubernetes operator that manages databasus configuration declaratively via Custom Resource Definitions (CRDs). Instead of configuring databases, backups, storages, and notifiers through the web UI, define them as Kubernetes resources and let the operator reconcile them against the databasus API.
+[![CI](https://github.com/sf1tzp/databasus-operator/actions/workflows/ci.yml/badge.svg)](https://github.com/sf1tzp/databasus-operator/actions/workflows/ci.yml)
+
+A Kubernetes operator that manages [databasus](https://github.com/databasus/databasus) configuration declaratively via Custom Resource Definitions (CRDs). Instead of configuring databases, backups, storages, and notifiers through the web UI, define them as Kubernetes resources and let the operator reconcile them against the databasus API.
+
+The operator is a standalone project — it is not a fork or a modified distribution of databasus. Deploy it alongside a stock databasus instance (e.g. the [upstream Helm chart](https://github.com/databasus/databasus/tree/main/deploy/helm)) and it drives configuration through the same REST API the web UI uses.
+
+## Compatibility
+
+databasus does not yet guarantee a stable API, so each operator release is pinned to the databasus versions it was tested against:
+
+| operator | databasus | status |
+|----------|-----------|--------|
+| `main`   | v3.38.0   | tested |
+| `main`   | v3.48.x   | migration in progress |
+
+If you run an untested databasus version, the operator may fail to reconcile after upstream API changes — check this table before upgrading databasus.
 
 ## How it works
 
@@ -224,3 +239,17 @@ kubectl delete databasebackups,notifiers,storages --all -n databasus-operator-sy
 make undeploy
 make uninstall
 ```
+
+## Development
+
+Primary development happens on a private Gitea instance; the GitHub repository is a push mirror of it. Issues and pull requests are welcome on GitHub — PRs are imported and merged internally, then mirrored back.
+
+```bash
+make lint   # golangci-lint
+make test   # unit tests via envtest
+make build  # manager binary
+```
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).
