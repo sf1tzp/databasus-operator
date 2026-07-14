@@ -7,31 +7,72 @@ The operator was developed and tested against **databasus v3.38.0**. It reconcil
 the client in `internal/client/`. Lint is clean; there is no automated test coverage
 of the API client yet — that is the top gap.
 
-## 1. Migrate the API client to databasus v3.48.x
+## Design principle: operator-owned CRD schema
 
-databasus does not guarantee API stability. An audit of upstream changes between
-v3.38.0 (fork point `41de3b7c`, 2026-05-12) and v3.48.0 found these contract changes
-relevant to the operator:
+databasus does not guarantee API stability, and it ships breaking renames every few
+minor versions. To keep that churn out of user-facing CRs, **the operator owns the
+CRD vocabulary** and translates to the pinned upstream version's wire format inside
+`internal/client/`. Concretely:
+
+- The CRD keeps `spec.database.type: POSTGRES` and `spec.database.postgresql`;
+  the client maps these to upstream's `POSTGRES_LOGICAL` / `postgresqlLogical`.
+- Upstream renames (e.g. interval `interval` → `type`) are absorbed as code changes
+  to the client DTOs, never as CR schema changes.
+- New *capabilities* (not renames) may still change the CRD — see `sslMode` below.
+
+While the API is `v1alpha1`, schema breaks are handled **in place**: bump nothing,
+document the break, recreate affected CRs. Conversion webhooks / version bumps are
+deferred until there are external users.
+
+## 1. Migrate to databasus v3.48.x
+
+Audit of upstream changes between v3.38.0 (fork point `41de3b7c`, 2026-05-12) and
+v3.48.0, verified against the v3.48.0 source (July 2026):
 
 | Endpoint area | Verdict | Detail |
 |---|---|---|
-| `POST /api/v1/users/signin` | unchanged | |
+| `POST /api/v1/users/signin` | unchanged | still `email`/`password` → `token`; Bearer auth unchanged |
 | `GET /api/v1/workspaces` | unchanged | |
 | `GET /api/v1/system/health` | unchanged | |
-| `/api/v1/notifiers` | unchanged | |
+| `/api/v1/notifiers` | unchanged | all six notifier type DTOs unchanged |
 | `/api/v1/healthcheck-config` | unchanged | |
-| `/api/v1/storages` | near-unchanged | `isSystem` removed from responses (harmless) |
-| `/api/v1/databases/*` | **breaking** | type enum `POSTGRES` split into `POSTGRES_LOGICAL` / `POSTGRES_PHYSICAL`; request/response field `postgresql` split into `postgresqlLogical` / `postgresqlPhysical` |
-| `/api/v1/backup-configs/*` | **breaking** | endpoints split into logical (`/backup-configs/save`, `/backup-configs/database/{id}`) and physical (`/backup-configs/physical/...`) paths; interval DTO renamed `interval` → `type` and no longer carries an `id`; physical configs add required retention/interval fields |
+| `/api/v1/storages` | near-unchanged | `isSystem` removed from the storage model; we send it in `StorageRequest` (not the response as previously noted) — silently ignored, drop it |
+| `/api/v1/databases/*` | **breaking** | type enum `POSTGRES` removed, replaced by `POSTGRES_LOGICAL` / `POSTGRES_PHYSICAL` (no back-compat alias); `postgresql` field split into `postgresqlLogical` / `postgresqlPhysical`. The logical DTO also **drops `isHttps` and `backupType`** and adds `sslMode` (`disable`/`require`/`verify-ca`/`verify-full`), `sslClientCert`/`sslClientKey`/`sslRootCert`, `excludeTables`, `isSkipUserMappings`. Routes themselves unchanged. `isHttps` survives for mysql/mariadb/mongodb |
+| `/api/v1/backup-configs/*` | near-unchanged for us | our existing paths (`POST /backup-configs/save`, `GET /backup-configs/database/{id}`) **are** the logical paths; only the physical variants got new `/backup-configs/physical/...` routes (unused). Interval DTO renamed `interval` → `type` and dropped `id` |
 
-Migration scope: the operator targets **logical** backups (pg_dump-style), so only
-the logical paths of each split need to be adopted. Tasks:
+Note: the server does not reject unknown JSON fields, so stale fields fail silently
+— against v3.48 the old `postgresql` payload is dropped wholesale and creation fails
+with a validation error ("host is required"), not a schema error.
 
-- [ ] Update `internal/client/database.go` for the type-enum and DTO field splits
-- [ ] Update `internal/client/backup_config.go` for the logical endpoint paths and interval rename
-- [ ] Drop `isSystem` from `StorageResponse`
-- [ ] Update CRD enums/docs where `POSTGRES` is exposed (`DatabaseBackup.spec.database.type`)
-- [ ] Update the README compatibility matrix
+### Decisions (July 2026)
+
+- **CRD stays operator-owned** (see principle above): `type: POSTGRES` and the
+  `postgresql` key are kept; the client layer does the renaming.
+- **`backupType` (`PG_DUMP`/`WAL_V1`) is kept** as the operator's logical/physical
+  selector. `PG_DUMP` maps to `POSTGRES_LOGICAL`; `WAL_V1` is rejected by the
+  controller with a clear error until physical backups are supported.
+- **`isHttps` is replaced by `sslMode` + cert secret refs** on the postgres spec —
+  this is new upstream capability, not a rename, so it does change the CRD.
+  Cert material follows the existing `SecretKeyRef` pattern
+  (`sslClientCertSecretRef`, `sslClientKeySecretRef`, `sslRootCertSecretRef`).
+  Breaking for CRs with `isHttps: true`; test-env CRs are recreated.
+- **Client migration and the contract-test suite land on the same branch**, pinned
+  at v3.48, so the README compatibility claim is proven at merge, not asserted.
+
+### Tasks
+
+- [ ] `internal/client/database.go`: map `POSTGRES` → `POSTGRES_LOGICAL`; replace
+      `PostgresqlRequest` with the `postgresqlLogical` DTO (`sslMode`, cert fields,
+      `excludeTables`, `isSkipUserMappings`; no `isHttps`/`backupType`)
+- [ ] `internal/client/backup_config.go`: `IntervalRequest` field `interval` → `type`,
+      drop `id`
+- [ ] `internal/client/storage.go`: drop `IsSystem` from `StorageRequest`
+- [ ] CRD: replace `PostgresqlDatabaseSpec.IsHttps` with `sslMode` (+ optional
+      cert secret refs, `excludeTables`, `isSkipUserMappings`); reject
+      `backupType: WAL_V1` in the controller; `make manifests generate`
+- [ ] Contract tests (see §2) in the same branch, pinned to v3.48
+- [ ] Update the README compatibility matrix; document the `isHttps` → `sslMode`
+      CR break and test-env CR recreation
 
 ## 2. Contract tests in CI
 
@@ -39,6 +80,7 @@ Make the compatibility matrix verified instead of asserted:
 
 - [ ] Integration test suite that runs the `internal/client` calls against a real
       databasus instance (pinned image tag + postgres) started in CI
+      (lands with the §1 migration branch)
 - [ ] Pin the databasus image version in one greppable place so Renovate can bump it;
       each upstream release then arrives as a PR whose CI proves (or disproves)
       compatibility
@@ -55,5 +97,8 @@ Make the compatibility matrix verified instead of asserted:
 
 - Runtime version check: warn (via a status condition) when the connected databasus
   version is outside the tested range
+- Physical backups: `backupType: WAL_V1` → `POSTGRES_PHYSICAL` + the
+  `/backup-configs/physical/...` endpoints (requires the extra retention/interval
+  fields the physical config demands)
 - Surface upstream's backup-verification feature (v3.34+) in the CRDs
 - Helm chart for the operator itself
