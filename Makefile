@@ -62,12 +62,17 @@ test: manifests generate fmt vet setup-envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 CONTRACT_COMPOSE = test/contract/docker-compose.yaml
+# Where the tests reach the composed databasus instance. Override when the
+# published port is not on localhost (e.g. DinD runners: the daemon host).
+DATABASUS_URL ?= http://localhost:4005
 
 .PHONY: test-contract
 test-contract: ## Run API contract tests against the pinned databasus image.
 	$(CONTAINER_TOOL) compose -f $(CONTRACT_COMPOSE) up -d
-	DATABASUS_URL=http://localhost:4005 go test -v -count=1 -timeout 10m ./test/contract/...; \
-	status=$$?; $(CONTAINER_TOOL) compose -f $(CONTRACT_COMPOSE) down -v; exit $$status
+	DATABASUS_URL=$(DATABASUS_URL) go test -v -count=1 -timeout 10m ./test/contract/...; \
+	status=$$?; \
+	if [ $$status -ne 0 ]; then $(CONTAINER_TOOL) compose -f $(CONTRACT_COMPOSE) logs --tail=100; fi; \
+	$(CONTAINER_TOOL) compose -f $(CONTRACT_COMPOSE) down -v; exit $$status
 
 # TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
 # The default setup assumes Kind is pre-installed and builds/loads the Manager Docker image locally.
