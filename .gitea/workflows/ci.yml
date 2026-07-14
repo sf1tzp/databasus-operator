@@ -1,0 +1,43 @@
+# Gitea Actions copy of .github/workflows/ci.yml — keep the two in sync by
+# hand. Gitea only falls back to .github/workflows while this directory does
+# not exist (see CLAUDE.md); it exists so release workflows can live in
+# .github/workflows without the gitea runner attempting them.
+#
+# Divergence from the GitHub copy: the act_runner executes jobs in containers
+# against a DinD daemon, so a compose-published port is reachable at the job
+# container's default gateway (the DinD host), not localhost.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Lint
+        run: make lint
+      - name: Test
+        run: make test
+      - name: Build
+        run: make build
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Contract tests against pinned databasus
+        run: |
+          gateway=$(ip route 2>/dev/null | awk '/^default/ {print $3; exit}')
+          export DATABASUS_URL="http://${gateway:-localhost}:4005"
+          echo "Using DATABASUS_URL=$DATABASUS_URL"
+          make test-contract
