@@ -18,7 +18,7 @@ If you run an untested databasus version, the operator may fail to reconcile aft
 
 **CR schema break (v3.48 migration):** `DatabaseBackup.spec.database.postgresql.isHttps` was replaced by `sslMode` (`disable`/`require`/`verify-ca`/`verify-full`) plus optional `sslClientCertSecretRef`/`sslClientKeySecretRef`/`sslRootCertSecretRef` (each a Secret name/key reference). CRs that set `isHttps: true` should now set `sslMode: require`. Re-apply the CRDs and recreate affected `DatabaseBackup` resources.
 
-**Scope: logical backups only.** The operator drives databasus's logical (`pg_dump`-style) backups. databasus's physical postgres backups (`POSTGRES_PHYSICAL`, WAL streaming) are unsupported — `backupType: WAL_V1` is rejected with a `Ready=False` condition. If you need physical/WAL-based backups, use a mechanism native to your database platform instead, e.g. CloudNativePG's barman plugin with WAL archiving to S3.
+**Scope: logical backups only.** The operator drives databasus's logical (`pg_dump`-style) backups. databasus's physical postgres backups (`POSTGRES_PHYSICAL`, WAL streaming) are unsupported — `backupType: WAL_V1` is rejected with a `Ready=False` condition. If you need physical/WAL-based backups, use a mechanism native to your database platform instead, e.g. CloudNativePG's barman plugin with WAL archiving to S3, or create an Issue on Github. With enough community interest we may add this in the future.
 
 ## How it works
 
@@ -197,7 +197,7 @@ spec:
         name: db-credentials
         key: password
       database: mydb
-      backupType: PG_DUMP  # PG_DUMP or WAL_V1
+      backupType: PG_DUMP  # only PG_DUMP is supported (see "Scope" above)
 
   backup:
     isEnabled: true
