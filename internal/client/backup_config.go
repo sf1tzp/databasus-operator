@@ -34,8 +34,7 @@ type StorageRef struct {
 }
 
 type IntervalRequest struct {
-	ID             string  `json:"id,omitempty"`
-	Interval       string  `json:"interval"`
+	Type           string  `json:"type"`
 	TimeOfDay      *string `json:"timeOfDay,omitempty"`
 	Weekday        *int    `json:"weekday,omitempty"`
 	DayOfMonth     *int    `json:"dayOfMonth,omitempty"`

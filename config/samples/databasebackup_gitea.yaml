@@ -18,7 +18,7 @@ spec:
         name: gitea-db-credentials
         key: password
       database: gitea
-      isHttps: false
+      sslMode: disable
       backupType: PG_DUMP
   backup:
     isEnabled: true

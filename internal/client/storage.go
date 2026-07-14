@@ -12,7 +12,6 @@ type StorageRequest struct {
 	WorkspaceID string       `json:"workspaceId"`
 	Type        string       `json:"type"`
 	Name        string       `json:"name"`
-	IsSystem    bool         `json:"isSystem"`
 	S3Storage   *S3Request   `json:"s3Storage,omitempty"`
 	SFTPStorage *SFTPRequest `json:"sftpStorage,omitempty"`
 	// Additional storage types can be added as needed.

@@ -8,16 +8,25 @@ import (
 	"time"
 )
 
+// Wire values for DatabaseRequest.Type. Upstream v3.48 split POSTGRES into
+// logical/physical variants; the operator only drives logical backups.
+const (
+	DatabaseTypePostgresLogical = "POSTGRES_LOGICAL"
+	DatabaseTypeMysql           = "MYSQL"
+	DatabaseTypeMariadb         = "MARIADB"
+	DatabaseTypeMongodb         = "MONGODB"
+)
+
 type DatabaseRequest struct {
 	ID          string `json:"id,omitempty"`
 	WorkspaceID string `json:"workspaceId"`
 	Name        string `json:"name"`
 	Type        string `json:"type"`
 
-	Postgresql *PostgresqlRequest `json:"postgresql,omitempty"`
-	Mysql      *MysqlRequest      `json:"mysql,omitempty"`
-	Mariadb    *MariadbRequest    `json:"mariadb,omitempty"`
-	Mongodb    *MongodbRequest    `json:"mongodb,omitempty"`
+	PostgresqlLogical *PostgresqlLogicalRequest `json:"postgresqlLogical,omitempty"`
+	Mysql             *MysqlRequest             `json:"mysql,omitempty"`
+	Mariadb           *MariadbRequest           `json:"mariadb,omitempty"`
+	Mongodb           *MongodbRequest           `json:"mongodb,omitempty"`
 
 	Notifiers []NotifierRef `json:"notifiers,omitempty"`
 }
@@ -27,17 +36,25 @@ type NotifierRef struct {
 	WorkspaceID string `json:"workspaceId"`
 }
 
-type PostgresqlRequest struct {
-	Version        string   `json:"version"`
-	Host           string   `json:"host"`
-	Port           int      `json:"port"`
-	Username       string   `json:"username"`
-	Password       string   `json:"password"`
-	Database       *string  `json:"database,omitempty"`
-	IsHttps        bool     `json:"isHttps"`
-	BackupType     string   `json:"backupType"`
-	IncludeSchemas []string `json:"includeSchemas,omitempty"`
-	CpuCount       int      `json:"cpuCount"`
+type PostgresqlLogicalRequest struct {
+	Version  string  `json:"version"`
+	Host     string  `json:"host"`
+	Port     int     `json:"port"`
+	Username string  `json:"username"`
+	Password string  `json:"password"`
+	Database *string `json:"database,omitempty"`
+
+	// SslMode is one of disable, require, verify-ca, verify-full.
+	// The server defaults empty to disable.
+	SslMode       string `json:"sslMode,omitempty"`
+	SslClientCert string `json:"sslClientCert,omitempty"`
+	SslClientKey  string `json:"sslClientKey,omitempty"`
+	SslRootCert   string `json:"sslRootCert,omitempty"`
+
+	IncludeSchemas     []string `json:"includeSchemas,omitempty"`
+	ExcludeTables      []string `json:"excludeTables,omitempty"`
+	CpuCount           int      `json:"cpuCount"`
+	IsSkipUserMappings bool     `json:"isSkipUserMappings"`
 }
 
 type MysqlRequest struct {
