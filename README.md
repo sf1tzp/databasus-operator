@@ -16,7 +16,9 @@ databasus does not yet guarantee a stable API, so each operator release is pinne
 
 If you run an untested databasus version, the operator may fail to reconcile after upstream API changes — check this table before upgrading databasus. `main` no longer speaks the pre-v3.48 wire format (v3.48 split the postgres type into logical/physical variants); use an older operator commit for databasus ≤ v3.47.
 
-**CR schema break (v3.48 migration):** `DatabaseBackup.spec.database.postgresql.isHttps` was replaced by `sslMode` (`disable`/`require`/`verify-ca`/`verify-full`) plus optional `sslClientCertSecretRef`/`sslClientKeySecretRef`/`sslRootCertSecretRef` (each a Secret name/key reference). CRs that set `isHttps: true` should now set `sslMode: require`. Re-apply the CRDs and recreate affected `DatabaseBackup` resources. `backupType: WAL_V1` (physical backups) is not supported yet and is rejected with a `Ready=False` condition.
+**CR schema break (v3.48 migration):** `DatabaseBackup.spec.database.postgresql.isHttps` was replaced by `sslMode` (`disable`/`require`/`verify-ca`/`verify-full`) plus optional `sslClientCertSecretRef`/`sslClientKeySecretRef`/`sslRootCertSecretRef` (each a Secret name/key reference). CRs that set `isHttps: true` should now set `sslMode: require`. Re-apply the CRDs and recreate affected `DatabaseBackup` resources.
+
+**Scope: logical backups only.** The operator drives databasus's logical (`pg_dump`-style) backups. databasus's physical postgres backups (`POSTGRES_PHYSICAL`, WAL streaming) are unsupported — `backupType: WAL_V1` is rejected with a `Ready=False` condition. If you need physical/WAL-based backups, use a mechanism native to your database platform instead, e.g. CloudNativePG's barman plugin with WAL archiving to S3.
 
 ## How it works
 
