@@ -13,6 +13,20 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      # setup-go caches GOMODCACHE/GOCACHE keyed on go.sum; this covers the
+      # Makefile-managed tools in ./bin (golangci-lint, controller-gen,
+      # setup-envtest + envtest k8s binaries), whose pinned versions derive
+      # from the Makefile and go.mod. Binaries are version-suffixed, so a
+      # stale restore just re-installs the changed tool.
+      - name: Cache Make tooling
+        uses: actions/cache@v5
+        with:
+          path: |
+            bin
+            !bin/manager
+          key: ${{ runner.os }}-make-tools-${{ hashFiles('Makefile', 'go.mod') }}
+          restore-keys: |
+            ${{ runner.os }}-make-tools-
       - name: Lint
         run: make lint
       - name: Test
