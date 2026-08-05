@@ -7,11 +7,9 @@ spec:
   database:
     name: gitea
     type: POSTGRES
-    notifierRefs:
-      - discord-monitoring
     postgresql:
       version: "18"
-      host: postgres-postgresql.postgres.svc.cluster.local
+      host: postgres-rw.postgres.svc.cluster.local
       port: 5432
       username: gitea
       passwordSecretRef:

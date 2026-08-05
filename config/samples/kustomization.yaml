@@ -1,6 +1,7 @@
-## Append samples of your project ##
+## Test-environment CRs (luxor): gitea database → rustfs S3 storage.
+## credentials_secret.yaml is a template — the real secret is created
+## out-of-band; notifier_discord.yaml needs a discord-webhook secret.
 resources:
-- databasus_v1alpha1_storage.yaml
-- databasus_v1alpha1_notifier.yaml
-- databasus_v1alpha1_databasebackup.yaml
+- storage_s3.yaml
+- databasebackup_gitea.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
