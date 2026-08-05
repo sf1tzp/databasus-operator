@@ -81,8 +81,10 @@ client now defaults it on update as it already did on create.
       (`make test-contract`, `test/contract/`)
 - [x] Update the README compatibility matrix; document the `isHttps` → `sslMode`
       CR break and test-env CR recreation
-- [ ] Recreate the test-env CRs against the new CRD schema and verify a live
-      reconcile end-to-end
+- [x] Recreate the test-env CRs against the new CRD schema and verify a live
+      reconcile end-to-end (2026-08-05, against databasus v3.51.0 on luxor:
+      Storage + DatabaseBackup synced, gitea pg_dump landed in the rustfs
+      `databasus` bucket, healthcheck reports AVAILABLE)
 
 ### v3.48.0 → v3.51.0 re-audit (August 2026)
 
