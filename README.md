@@ -85,7 +85,24 @@ kubectl create secret generic gitea-db-credentials \
   -n databasus-operator-system
 ```
 
-### 3. Build and deploy the operator
+### 3. Install the operator
+
+Every release tag publishes a multi-arch image (`ghcr.io/sf1tzp/databasus-operator`) and a Helm chart to GHCR. Chart version, appVersion, and image tag move in lockstep with the release.
+
+```bash
+helm install databasus-operator oci://ghcr.io/sf1tzp/charts/databasus-operator \
+  --namespace databasus --create-namespace
+```
+
+See the [chart README](charts/databasus-operator/README.md) for values — databasus API URL, credentials Secret, and CRD handling (CRDs upgrade with the chart by default; uninstalling the chart then removes them and every operator CR).
+
+Alternatively, apply the standalone manifest attached to each [GitHub release](https://github.com/sf1tzp/databasus-operator/releases):
+
+```bash
+kubectl apply -f https://github.com/sf1tzp/databasus-operator/releases/download/vX.Y.Z/install.yaml
+```
+
+Or build and deploy from source:
 
 ```bash
 # Build the image
@@ -252,6 +269,12 @@ Primary development happens on a private Gitea instance; the GitHub repository i
 make lint   # golangci-lint
 make test   # unit tests via envtest
 make build  # manager binary
+```
+
+Releasing is a single guarded step — pushing the tag is the release (the mirrored tag triggers the publish workflow):
+
+```bash
+just tag 0.1.0   # tag HEAD (must be at origin/main) and push
 ```
 
 ## License

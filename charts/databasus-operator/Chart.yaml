@@ -1,0 +1,23 @@
+apiVersion: v2
+name: databasus-operator
+description: Kubernetes operator reconciling Storage, Notifier, and DatabaseBackup CRs against a stock databasus instance's REST API.
+type: application
+# Lockstep versioning (PrimeTime pattern): chart version = appVersion = the
+# repo's vX.Y.Z release tag; appVersion also derives the image tag
+# (v-prefixed — see templates/_helpers.tpl). The values below are
+# placeholders for local `helm install ./…` — the release workflow stamps
+# the real version from the git tag at package time
+# (--version/--app-version), so releases never depend on remembering to
+# bump this file.
+version: 0.1.0
+appVersion: "0.1.0"
+sources:
+  - https://github.com/sf1tzp/databasus-operator
+keywords:
+  - databasus
+  - backup
+  - operator
+maintainers:
+  - name: Steven Fitzpatrick
+annotations:
+  licenses: Apache-2.0

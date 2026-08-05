@@ -112,8 +112,22 @@ Make the compatibility matrix verified instead of asserted:
 
 ## 3. Release engineering
 
-- [ ] Release workflow: semver tag → build/push image to `ghcr.io/sf1tzp/databasus-operator`,
-      attach install manifests (`make build-installer`)
+- [x] Release workflow (August 2026, `.github/workflows/release.yml`, modeled
+      on PrimeTime's): semver tag → multi-arch image to
+      `ghcr.io/sf1tzp/databasus-operator`, Helm chart to
+      `oci://ghcr.io/sf1tzp/charts`, `install.yaml` attached to the GitHub
+      release. Runs on the GitHub mirror only — a mirrored tag push is a
+      normal PAT push and triggers it there; the mirror PAT needs the
+      `workflow` scope, and first-push GHCR packages must be flipped to
+      public in the web UI. `just tag X.Y.Z` guards the tagging (semver
+      check, HEAD must be origin/main); pushing the tag is the whole
+      release — there is no by-hand pipeline, since nothing here is
+      CI-hostile the way PrimeTime's Mac-bound app release is.
+- [x] Helm chart (`charts/databasus-operator/`): lockstep chart version =
+      appVersion = release tag, stamped at package time; CRDs render as
+      templates (synced from `config/crd` via `make chart-crds`, enforced in
+      CI) so `helm upgrade` keeps them current.
+- [ ] Cut v0.1.0 once the migration PR merges; pin the fleet to it
 - [ ] Versioned compatibility rows in the README (operator vX.Y ↔ databasus vA.B)
 
 ## 4. Later ideas

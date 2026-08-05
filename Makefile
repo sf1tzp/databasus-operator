@@ -159,6 +159,16 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	cd config/manager && "$(KUSTOMIZE)" edit set image controller=${IMG}
 	"$(KUSTOMIZE)" build config/default > dist/install.yaml
 
+# The chart renders CRDs as regular templates (so `helm upgrade` keeps them
+# current with the operator); this target is the single source of that file.
+# CI fails if it is out of sync with config/crd — run this after any API
+# type change, alongside `make manifests`.
+.PHONY: chart-crds
+chart-crds: manifests kustomize ## Sync generated CRDs into the Helm chart.
+	{ echo '{{- if .Values.crds.enabled }}'; \
+	  "$(KUSTOMIZE)" build config/crd; \
+	  echo '{{- end }}'; } > charts/databasus-operator/templates/crds.yaml
+
 ##@ Deployment
 
 ifndef ignore-not-found
