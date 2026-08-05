@@ -271,11 +271,10 @@ make test   # unit tests via envtest
 make build  # manager binary
 ```
 
-Releases are driven by [just](https://github.com/casey/just) (project scripts; Make keeps the Go and chart targets):
+Releasing is a single guarded step — pushing the tag is the release (the mirrored tag triggers the publish workflow):
 
 ```bash
-just tag 0.1.0   # tag HEAD (must be at origin/main) and push — the mirrored tag triggers release CI
-just release     # by-hand fallback: image + chart + install.yaml, GHCR + internal registry
+just tag 0.1.0   # tag HEAD (must be at origin/main) and push
 ```
 
 ## License
