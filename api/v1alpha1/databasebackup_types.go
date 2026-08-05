@@ -81,12 +81,26 @@ type PostgresqlDatabaseSpec struct {
 	Username          string       `json:"username"`
 	PasswordSecretRef SecretKeyRef `json:"passwordSecretRef"`
 	Database          string       `json:"database,omitempty"`
-	// +kubebuilder:default=false
-	IsHttps bool `json:"isHttps,omitempty"`
+
+	// SslMode controls TLS for the database connection (libpq semantics).
+	// +kubebuilder:validation:Enum=disable;require;verify-ca;verify-full
+	// +kubebuilder:default=disable
+	SslMode string `json:"sslMode,omitempty"`
+	// PEM client certificate for mutual TLS.
+	SslClientCertSecretRef *SecretKeyRef `json:"sslClientCertSecretRef,omitempty"`
+	// PEM client key for mutual TLS.
+	SslClientKeySecretRef *SecretKeyRef `json:"sslClientKeySecretRef,omitempty"`
+	// PEM CA certificate used to verify the server (verify-ca/verify-full).
+	SslRootCertSecretRef *SecretKeyRef `json:"sslRootCertSecretRef,omitempty"`
+
 	// +kubebuilder:validation:Enum=PG_DUMP;WAL_V1
 	// +kubebuilder:default=PG_DUMP
 	BackupType     string   `json:"backupType,omitempty"`
 	IncludeSchemas []string `json:"includeSchemas,omitempty"`
+	ExcludeTables  []string `json:"excludeTables,omitempty"`
+	// Skip the readable-user-mappings check before pg_dump.
+	// +kubebuilder:default=false
+	IsSkipUserMappings bool `json:"isSkipUserMappings,omitempty"`
 	// +kubebuilder:default=1
 	CpuCount int `json:"cpuCount,omitempty"`
 }

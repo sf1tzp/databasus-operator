@@ -12,7 +12,6 @@ type StorageRequest struct {
 	WorkspaceID string       `json:"workspaceId"`
 	Type        string       `json:"type"`
 	Name        string       `json:"name"`
-	IsSystem    bool         `json:"isSystem"`
 	S3Storage   *S3Request   `json:"s3Storage,omitempty"`
 	SFTPStorage *SFTPRequest `json:"sftpStorage,omitempty"`
 	// Additional storage types can be added as needed.
@@ -76,7 +75,7 @@ func (c *DatabasusClient) GetStorage(ctx context.Context, storageID string) (*St
 		return nil, err
 	}
 
-	if statusCode == http.StatusNotFound {
+	if isNotFound(statusCode, body) {
 		return nil, nil
 	}
 
@@ -98,7 +97,7 @@ func (c *DatabasusClient) DeleteStorage(ctx context.Context, storageID string) e
 		return err
 	}
 
-	if statusCode != http.StatusOK && statusCode != http.StatusNoContent {
+	if statusCode != http.StatusOK && statusCode != http.StatusNoContent && !isNotFound(statusCode, body) {
 		return parseError(statusCode, body)
 	}
 

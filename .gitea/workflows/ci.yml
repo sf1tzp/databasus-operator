@@ -1,3 +1,11 @@
+# Gitea Actions copy of .github/workflows/ci.yml — keep the two in sync by
+# hand. Gitea only falls back to .github/workflows while this directory does
+# not exist (see CLAUDE.md); it exists so release workflows can live in
+# .github/workflows without the gitea runner attempting them.
+#
+# Divergence from the GitHub copy: the act_runner executes jobs in containers
+# against a DinD daemon, so a compose-published port is reachable at the job
+# container's default gateway (the DinD host), not localhost.
 name: CI
 
 on:
@@ -42,4 +50,10 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Contract tests against pinned databasus
-        run: make test-contract
+        run: |
+          # Job containers run on the DinD daemon's bridge network, so the
+          # compose-published 4005 port lives on the DinD host, not localhost.
+          # The runner config injects host.docker.internal for this via
+          # `--add-host=host.docker.internal:host-gateway` in container.options
+          # (homelab/k8s/gitea-actions/values.yaml).
+          DATABASUS_URL=http://host.docker.internal:4005 make test-contract

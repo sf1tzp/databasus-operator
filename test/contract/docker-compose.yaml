@@ -1,0 +1,16 @@
+# Contract-test environment: a stock databasus instance plus a postgres
+# database for it to back up. The databasus image tag below is THE pinned
+# upstream version the operator is tested against — Renovate bumps it, and
+# CI proves (or disproves) compatibility with each new release.
+services:
+  databasus:
+    image: databasus/databasus:v3.51.0
+    ports:
+      - "4005:4005"
+
+  target-postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app_password_123

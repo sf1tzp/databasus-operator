@@ -553,8 +553,28 @@ func (in *NotifierStatus) DeepCopy() *NotifierStatus {
 func (in *PostgresqlDatabaseSpec) DeepCopyInto(out *PostgresqlDatabaseSpec) {
 	*out = *in
 	out.PasswordSecretRef = in.PasswordSecretRef
+	if in.SslClientCertSecretRef != nil {
+		in, out := &in.SslClientCertSecretRef, &out.SslClientCertSecretRef
+		*out = new(SecretKeyRef)
+		**out = **in
+	}
+	if in.SslClientKeySecretRef != nil {
+		in, out := &in.SslClientKeySecretRef, &out.SslClientKeySecretRef
+		*out = new(SecretKeyRef)
+		**out = **in
+	}
+	if in.SslRootCertSecretRef != nil {
+		in, out := &in.SslRootCertSecretRef, &out.SslRootCertSecretRef
+		*out = new(SecretKeyRef)
+		**out = **in
+	}
 	if in.IncludeSchemas != nil {
 		in, out := &in.IncludeSchemas, &out.IncludeSchemas
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.ExcludeTables != nil {
+		in, out := &in.ExcludeTables, &out.ExcludeTables
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

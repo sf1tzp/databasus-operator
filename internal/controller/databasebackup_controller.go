@@ -97,6 +97,16 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
+	// Physical backups need the /backup-configs/physical API, which the operator
+	// does not drive yet. Only a spec change can fix this, so do not requeue.
+	if pg := dbBackup.Spec.Database.Postgresql; pg != nil && pg.BackupType == "WAL_V1" {
+		msg := "backupType WAL_V1 (physical backups) is not supported yet; use PG_DUMP"
+		r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "UnsupportedBackupType", msg)
+		_ = r.Status().Update(ctx, &dbBackup)
+
+		return ctrl.Result{}, nil
+	}
+
 	// Resolve database password
 	password, err := r.resolveDatabasePassword(ctx, &dbBackup)
 	if err != nil {
@@ -107,8 +117,18 @@ func (r *DatabaseBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
+	// Resolve postgres SSL cert material, if any
+	ssl, err := r.resolvePostgresSsl(ctx, &dbBackup)
+	if err != nil {
+		logger.Error(err, "failed to resolve postgres ssl secrets")
+		r.setReadyCondition(&dbBackup, metav1.ConditionFalse, "SecretResolutionFailed", err.Error())
+		_ = r.Status().Update(ctx, &dbBackup)
+
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
 	// Build and send database request
-	dbReq := r.buildDatabaseRequest(&dbBackup, password, notifierIDs)
+	dbReq := r.buildDatabaseRequest(&dbBackup, password, ssl, notifierIDs)
 
 	var dbResp *dbclient.DatabaseResponse
 
@@ -259,8 +279,12 @@ func (r *DatabaseBackupReconciler) resolveDatabasePassword(ctx context.Context, 
 		return "", fmt.Errorf("unsupported database type: %s", dbBackup.Spec.Database.Type)
 	}
 
+	return r.getSecretValue(ctx, dbBackup.Namespace, ref)
+}
+
+func (r *DatabaseBackupReconciler) getSecretValue(ctx context.Context, namespace string, ref databasusv1alpha1.SecretKeyRef) (string, error) {
 	var secret corev1.Secret
-	if err := r.Get(ctx, client.ObjectKey{Namespace: dbBackup.Namespace, Name: ref.Name}, &secret); err != nil {
+	if err := r.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ref.Name}, &secret); err != nil {
 		return "", fmt.Errorf("secret %q not found: %w", ref.Name, err)
 	}
 
@@ -272,7 +296,45 @@ func (r *DatabaseBackupReconciler) resolveDatabasePassword(ctx context.Context, 
 	return string(value), nil
 }
 
-func (r *DatabaseBackupReconciler) buildDatabaseRequest(dbBackup *databasusv1alpha1.DatabaseBackup, password string, notifierIDs []string) *dbclient.DatabaseRequest {
+// postgresSslMaterial holds resolved PEM data for the postgres SSL secret refs.
+type postgresSslMaterial struct {
+	clientCert string
+	clientKey  string
+	rootCert   string
+}
+
+func (r *DatabaseBackupReconciler) resolvePostgresSsl(ctx context.Context, dbBackup *databasusv1alpha1.DatabaseBackup) (postgresSslMaterial, error) {
+	var ssl postgresSslMaterial
+
+	pgSpec := dbBackup.Spec.Database.Postgresql
+	if dbBackup.Spec.Database.Type != databasusv1alpha1.DatabaseTypePostgres || pgSpec == nil {
+		return ssl, nil
+	}
+
+	var err error
+
+	if ref := pgSpec.SslClientCertSecretRef; ref != nil {
+		if ssl.clientCert, err = r.getSecretValue(ctx, dbBackup.Namespace, *ref); err != nil {
+			return ssl, fmt.Errorf("resolving sslClientCertSecretRef: %w", err)
+		}
+	}
+
+	if ref := pgSpec.SslClientKeySecretRef; ref != nil {
+		if ssl.clientKey, err = r.getSecretValue(ctx, dbBackup.Namespace, *ref); err != nil {
+			return ssl, fmt.Errorf("resolving sslClientKeySecretRef: %w", err)
+		}
+	}
+
+	if ref := pgSpec.SslRootCertSecretRef; ref != nil {
+		if ssl.rootCert, err = r.getSecretValue(ctx, dbBackup.Namespace, *ref); err != nil {
+			return ssl, fmt.Errorf("resolving sslRootCertSecretRef: %w", err)
+		}
+	}
+
+	return ssl, nil
+}
+
+func (r *DatabaseBackupReconciler) buildDatabaseRequest(dbBackup *databasusv1alpha1.DatabaseBackup, password string, ssl postgresSslMaterial, notifierIDs []string) *dbclient.DatabaseRequest {
 	req := &dbclient.DatabaseRequest{
 		WorkspaceID: r.DatabasusClient.WorkspaceID(),
 		Name:        dbBackup.Spec.Database.Name,
@@ -290,31 +352,35 @@ func (r *DatabaseBackupReconciler) buildDatabaseRequest(dbBackup *databasusv1alp
 	case databasusv1alpha1.DatabaseTypePostgres:
 		pgSpec := dbBackup.Spec.Database.Postgresql
 
-		pgReq := &dbclient.PostgresqlRequest{
-			Version:        pgSpec.Version,
-			Host:           pgSpec.Host,
-			Port:           pgSpec.Port,
-			Username:       pgSpec.Username,
-			Password:       password,
-			IsHttps:        pgSpec.IsHttps,
-			BackupType:     pgSpec.BackupType,
-			IncludeSchemas: pgSpec.IncludeSchemas,
-			CpuCount:       pgSpec.CpuCount,
+		// The CRD keeps type POSTGRES; upstream v3.48 wants POSTGRES_LOGICAL
+		// for pg_dump-style backups (WAL_V1/physical is rejected in Reconcile).
+		req.Type = dbclient.DatabaseTypePostgresLogical
+
+		pgReq := &dbclient.PostgresqlLogicalRequest{
+			Version:            pgSpec.Version,
+			Host:               pgSpec.Host,
+			Port:               pgSpec.Port,
+			Username:           pgSpec.Username,
+			Password:           password,
+			SslMode:            pgSpec.SslMode,
+			SslClientCert:      ssl.clientCert,
+			SslClientKey:       ssl.clientKey,
+			SslRootCert:        ssl.rootCert,
+			IncludeSchemas:     pgSpec.IncludeSchemas,
+			ExcludeTables:      pgSpec.ExcludeTables,
+			IsSkipUserMappings: pgSpec.IsSkipUserMappings,
+			CpuCount:           pgSpec.CpuCount,
 		}
 
 		if pgSpec.Database != "" {
 			pgReq.Database = &pgSpec.Database
 		}
 
-		if pgReq.BackupType == "" {
-			pgReq.BackupType = "PG_DUMP"
-		}
-
 		if pgReq.CpuCount == 0 {
 			pgReq.CpuCount = 1
 		}
 
-		req.Postgresql = pgReq
+		req.PostgresqlLogical = pgReq
 
 	case databasusv1alpha1.DatabaseTypeMysql:
 		mySpec := dbBackup.Spec.Database.Mysql
@@ -395,7 +461,7 @@ func (r *DatabaseBackupReconciler) buildBackupConfigRequest(dbBackup *databasusv
 		RetentionGfsYears:   backup.RetentionPolicy.GfsYears,
 		Storage:             &dbclient.StorageRef{ID: storageID},
 		BackupInterval: &dbclient.IntervalRequest{
-			Interval:       string(backup.Interval.Type),
+			Type:           string(backup.Interval.Type),
 			TimeOfDay:      backup.Interval.TimeOfDay,
 			Weekday:        backup.Interval.Weekday,
 			DayOfMonth:     backup.Interval.DayOfMonth,
