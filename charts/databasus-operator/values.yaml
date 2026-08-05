@@ -1,0 +1,56 @@
+image:
+  repository: ghcr.io/sf1tzp/databasus-operator
+  # Defaults to "v<appVersion>" (the release tag). Override for pre-release
+  # or locally built images.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+databasus:
+  # Base URL of the databasus API the operator drives. The default matches
+  # the upstream Helm chart installed as release "databasus" in namespace
+  # "databasus".
+  apiUrl: http://databasus-service.databasus.svc.cluster.local:4005
+  credentials:
+    # Secret holding `email` and `password` keys for a databasus user.
+    # Optional keys: `workspaceName` / `workspaceId` (see the operator
+    # README). Created out-of-band by default.
+    secretName: databasus-operator-credentials
+    # Namespace of that Secret. Empty means the release namespace.
+    secretNamespace: ""
+    # Convenience for test environments: render the Secret from the values
+    # below. Prefer out-of-band creation so credentials stay out of Helm
+    # release storage.
+    create: false
+    email: ""
+    password: ""
+
+crds:
+  # Install and upgrade the CRDs with the chart. CRDs are rendered as
+  # regular templates (not the crds/ directory) precisely so that `helm
+  # upgrade` keeps them current with the operator — databasus's API moves,
+  # and CRD schema changes ship with operator releases. NOTE: with this
+  # enabled, `helm uninstall` deletes the CRDs and therefore every Storage,
+  # Notifier, and DatabaseBackup CR in the cluster. Set to false if the
+  # CRDs are managed out-of-band (e.g. dist/install.yaml).
+  enabled: true
+
+replicaCount: 1
+leaderElection: true
+
+serviceAccount:
+  create: true
+  # Defaults to the fullname template.
+  name: ""
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}

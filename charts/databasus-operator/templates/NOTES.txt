@@ -1,0 +1,24 @@
+databasus-operator {{ .Chart.AppVersion }} deployed to namespace {{ .Release.Namespace }}.
+
+The manager authenticates against:
+
+    {{ .Values.databasus.apiUrl }}
+
+{{- if not .Values.databasus.credentials.create }}
+
+It reads credentials from the Secret "{{ .Values.databasus.credentials.secretName }}"
+(namespace: {{ .Values.databasus.credentials.secretNamespace | default .Release.Namespace }}).
+If it does not exist yet:
+
+    kubectl -n {{ .Values.databasus.credentials.secretNamespace | default .Release.Namespace }} create secret generic {{ .Values.databasus.credentials.secretName }} \
+        --from-literal=email=<user> --from-literal=password=<password>
+{{- end }}
+
+Next, declare resources — see config/samples/ in the repo for a full
+Storage + DatabaseBackup pair:
+
+    https://github.com/sf1tzp/databasus-operator/tree/main/config/samples
+
+Check reconciliation state with:
+
+    kubectl get storages,notifiers,databasebackups -A

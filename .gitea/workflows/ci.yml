@@ -41,6 +41,18 @@ jobs:
         run: make test
       - name: Build
         run: make build
+      # templates/crds.yaml is generated from config/crd — fail if a schema
+      # change forgot `make chart-crds`.
+      - name: Chart CRDs in sync
+        run: |
+          make chart-crds
+          git diff --exit-code charts/
+      - uses: azure/setup-helm@v4
+      - name: Helm lint and render
+        run: |
+          helm lint charts/databasus-operator
+          helm template smoke charts/databasus-operator > /dev/null
+          helm template smoke charts/databasus-operator --set crds.enabled=false > /dev/null
 
   contract:
     runs-on: ubuntu-latest

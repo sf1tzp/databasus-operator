@@ -1,0 +1,70 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "databasus-operator.fullname" . }}-manager
+  labels:
+    {{- include "databasus-operator.labels" . | nindent 4 }}
+rules:
+  # secretRefs in CRs resolve in the CR's namespace; the credentials Secret
+  # may live in yet another — hence cluster-scoped read access.
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, watch]
+  - apiGroups: [databasus.databasus.io]
+    resources: [databasebackups, notifiers, storages]
+    verbs: [create, delete, get, list, patch, update, watch]
+  - apiGroups: [databasus.databasus.io]
+    resources: [databasebackups/finalizers, notifiers/finalizers, storages/finalizers]
+    verbs: [update]
+  - apiGroups: [databasus.databasus.io]
+    resources: [databasebackups/status, notifiers/status, storages/status]
+    verbs: [get, patch, update]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "databasus-operator.fullname" . }}-manager
+  labels:
+    {{- include "databasus-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "databasus-operator.fullname" . }}-manager
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "databasus-operator.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- if .Values.leaderElection }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "databasus-operator.fullname" . }}-leader-election
+  labels:
+    {{- include "databasus-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "databasus-operator.fullname" . }}-leader-election
+  labels:
+    {{- include "databasus-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "databasus-operator.fullname" . }}-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "databasus-operator.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
