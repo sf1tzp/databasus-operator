@@ -119,7 +119,9 @@ Make the compatibility matrix verified instead of asserted:
       release. Runs on the GitHub mirror only — a mirrored tag push is a
       normal PAT push and triggers it there; the mirror PAT needs the
       `workflow` scope, and first-push GHCR packages must be flipped to
-      public in the web UI.
+      public in the web UI. `just tag X.Y.Z` guards the tagging (HEAD must
+      be origin/main); `just release` (scripts/release.sh) is the by-hand
+      fallback and the only path to the internal gitea registry.
 - [x] Helm chart (`charts/databasus-operator/`): lockstep chart version =
       appVersion = release tag, stamped at package time; CRDs render as
       templates (synced from `config/crd` via `make chart-crds`, enforced in

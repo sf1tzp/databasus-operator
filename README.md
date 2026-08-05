@@ -271,6 +271,13 @@ make test   # unit tests via envtest
 make build  # manager binary
 ```
 
+Releases are driven by [just](https://github.com/casey/just) (project scripts; Make keeps the Go and chart targets):
+
+```bash
+just tag 0.1.0   # tag HEAD (must be at origin/main) and push — the mirrored tag triggers release CI
+just release     # by-hand fallback: image + chart + install.yaml, GHCR + internal registry
+```
+
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE).
