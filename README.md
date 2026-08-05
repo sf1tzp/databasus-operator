@@ -12,7 +12,8 @@ databasus does not yet guarantee a stable API, so each operator release is pinne
 
 | operator | databasus | status |
 |----------|-----------|--------|
-| `main`   | v3.48.0   | tested |
+| `main`   | v3.51.0   | tested |
+| `main`   | v3.48.0 – v3.50.0 | compatible (audited; contract-tested at v3.48.0) |
 
 If you run an untested databasus version, the operator may fail to reconcile after upstream API changes — check this table before upgrading databasus. `main` no longer speaks the pre-v3.48 wire format (v3.48 split the postgres type into logical/physical variants); use an older operator commit for databasus ≤ v3.47.
 

@@ -4,7 +4,7 @@
 # CI proves (or disproves) compatibility with each new release.
 services:
   databasus:
-    image: databasus/databasus:v3.48.0
+    image: databasus/databasus:v3.51.0
     ports:
       - "4005:4005"
 

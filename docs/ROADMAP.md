@@ -84,6 +84,17 @@ client now defaults it on update as it already did on create.
 - [ ] Recreate the test-env CRs against the new CRD schema and verify a live
       reconcile end-to-end
 
+### v3.48.0 → v3.51.0 re-audit (August 2026)
+
+The fleet deployed databasus v3.51.0 (sfi/deployments#69), so the audit was
+re-run against the v3.48.0..v3.51.0 source diff: **no changes on any endpoint
+the operator uses**. `backup-configs`, `storages` (S3), `workspaces`, `users`,
+and `healthcheck-config` are untouched; `databases` changes are internal
+nil-guards; `notifiers` gained additive notification types (webhook
+`acceptNotificationTypes` filtering). New upstream work (physical-backup
+recovery scripts, logical DB size estimation, telemetry) is off our paths.
+The contract pin moved straight to v3.51.0 and the suite passes unchanged.
+
 ## 2. Contract tests in CI
 
 Make the compatibility matrix verified instead of asserted:
