@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/streetfortress/databasus-operator/actions/workflows/ci.yml/badge.svg)](https://github.com/streetfortress/databasus-operator/actions/workflows/ci.yml)
 
-> NOTICE: Big changes are coming soon. TLDR; databasus is moving in the opposite direction from our desired use case, so we'll be replacing this operator's backend with a focused, CNPG-aware, backup reconciler instead of operating a databasus client programatically. Big thanks to the databasus authors for providing the inspiration for this project!
+> NOTICE: Upstream databasus is moving in the opposite direction from this use case, and moving pretty quickly, so I've decided to call this a chalk this up as a k8s operator learning exercise and archive the project.
 
 A Kubernetes operator that manages [databasus](https://github.com/databasus/databasus) configuration declaratively via Custom Resource Definitions (CRDs). Instead of configuring databases, backups, storages, and notifiers through the web UI, define them as Kubernetes resources and let the operator reconcile them against the databasus API.
 
